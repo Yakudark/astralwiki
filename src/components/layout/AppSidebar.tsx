@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Shield, Home, Search, ChevronRight, Hash, Gavel, Map } from "lucide-react";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseClient } from "@/lib/supabase";
 import type { Section } from "@/types";
 
 // Composant Helper pour les liens de Sidebar
@@ -45,7 +45,8 @@ export function AppSidebar() {
 
   useEffect(() => {
     async function fetchSections() {
-      const { data } = await supabase
+const supabase = createSupabaseClient();
+const { data } = await supabase
         .from("sections")
         .select("*")
         .order("order_index", { ascending: true });

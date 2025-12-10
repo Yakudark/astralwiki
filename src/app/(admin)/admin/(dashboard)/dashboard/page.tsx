@@ -1,10 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { FileText, Users, Eye, Activity } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseClient } from "@/lib/supabase";
 
 export const revalidate = 0; // Pas de cache pour l'admin
 
 async function getStats() {
+  const supabase = createSupabaseClient();
   const { count: articlesCount } = await supabase.from('articles').select('*', { count: 'exact', head: true });
   const { count: sectionsCount } = await supabase.from('sections').select('*', { count: 'exact', head: true });
   // Simulation visites (à connecter à un vrai analytics plus tard)
