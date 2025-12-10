@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Editor } from "@/components/editor/Editor";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { slugify } from "@/lib/utils"; // Il faudra s'assurer que cette fonction existe ou l'implémenter inline
+
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Helper simple pour slugifier
@@ -38,7 +38,7 @@ export default function NewArticlePage() {
   // Charger les sections disponibles
   useEffect(() => {
     async function loadSections() {
-const { data } = await supabaseBrowser.from("sections").select(...)
+      const { data } = await supabaseBrowser.from("sections").select('*');
       if (data) setSections(data);
       setInitLoading(false);
     }
