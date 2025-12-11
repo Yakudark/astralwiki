@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Label } from "@/components/ui/label";
 import { AlertCircle, Loader2, ShieldCheck } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -109,8 +110,13 @@ export default function LoginPage() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col gap-2 border-t border-border/30 pt-4 text-center text-xs text-muted-foreground">
-             <p>Accès restreint aux membres du staff AstralRP.</p>
+        <CardFooter className="flex flex-col gap-4 border-t border-border/30 pt-6 text-center">
+             <Link href="/">
+                <Button variant="link" className="text-muted-foreground hover:text-primary">
+                    ← Retour à l'accueil
+                </Button>
+             </Link>
+             <p className="text-xs text-muted-foreground">Accès restreint aux membres du staff AstralRP.</p>
         </CardFooter>
       </Card>
     </div>

@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { FileText, Users, Eye, Activity } from "lucide-react";
 import { createSupabaseClient } from "@/lib/supabase";
+import Link from "next/link";
 
 export const revalidate = 0; // Pas de cache pour l'admin
 
@@ -109,12 +110,12 @@ export default async function AdminDashboard() {
             </CardHeader>
             <CardContent className="space-y-4">
                {/* Ici on mettra les boutons pour créer un article */}
-               <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 text-primary mb-2">
+               <Link href="/admin/content/new" className="block p-4 rounded-lg bg-primary/10 border border-primary/20 text-primary mb-2 hover:bg-primary/20 transition-colors cursor-pointer">
                   Créer un nouvel article
-               </div>
-               <div className="p-4 rounded-lg bg-secondary/30 border border-white/5">
+               </Link>
+               <Link href="/admin/content" className="block p-4 rounded-lg bg-secondary/30 border border-white/5 hover:bg-secondary/50 transition-colors cursor-pointer text-muted-foreground hover:text-white">
                   Gérer les sections
-               </div>
+               </Link>
             </CardContent>
          </Card>
       </div>

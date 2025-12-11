@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,36 +23,57 @@ function generateSlug(text: string) {
     .replace(/^-+|-+$/g, ''); // Remove leading/trailing -
 }
 
-export default function NewArticlePage() {
+export default function EditArticlePage() {
   const router = useRouter();
+  const params = useParams();
+  const articleId = params?.articleId as string;
   
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [sectionId, setSectionId] = useState("");
-  const [content, setContent] = useState("<p>Commencez à rédiger...</p>");
+  const [content, setContent] = useState("<p>Chargement...</p>");
   const [sections, setSections] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [initLoading, setInitLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Charger les sections disponibles
+  // Charger les sections disponibles et l'article
   useEffect(() => {
-    async function loadSections() {
-      const { data } = await supabaseBrowser.from("sections").select('*');
-      if (data) setSections(data);
-      setInitLoading(false);
-    }
-    loadSections();
-  }, []);
+    async function loadData() {
+        try {
+            // 1. Fetch sections
+            const { data: sectionsData, error: sectionsError } = await supabaseBrowser.from("sections").select('*');
+            if (sectionsError) throw sectionsError;
+            if (sectionsData) setSections(sectionsData);
 
-  // Auto-generate slug from title
-  useEffect(() => {
-    if (title) {
-       // Only update if slug hasn't been manually edited heavily? 
-       // For simplicity, let's just update if slug is empty or matches previous title slug
-       setSlug(generateSlug(title));
+            // 2. Fetch article
+            if (!articleId) throw new Error("ID de l'article manquant");
+            const { data: articleData, error: articleError } = await supabaseBrowser
+                .from("articles")
+                .select('*')
+                .eq('id', articleId)
+                .single();
+            
+            if (articleError) throw articleError;
+            if (articleData) {
+                setTitle(articleData.title);
+                setSlug(articleData.slug);
+                setSectionId(articleData.section_id);
+                setContent(articleData.content || "");
+            }
+
+        } catch (err: any) {
+            console.error(err);
+            setError(err.message || "Erreur lors du chargement des données.");
+        } finally {
+            setInitLoading(false);
+        }
     }
-  }, [title]);
+    loadData();
+  }, [articleId]);
+
+  // Pas d'auto-generate slug sur edit pour éviter de casser les liens existants accidentellement
+  // Sauf si le slug est vide, ce qui ne devrait pas arriver sur un edit.
 
   const handleSubmit = async (publish: boolean) => {
     if (!title || !slug || !sectionId) {
@@ -64,14 +85,17 @@ export default function NewArticlePage() {
     setError(null);
 
     try {
-      const { data, error } = await supabaseBrowser.from('articles').insert({
-        title,
-        slug,
-        section_id: sectionId,
-        content,
-        is_published: publish,
-        order_index: 99 // Put at end by default
-      }).select().single();
+      const { error } = await supabaseBrowser
+        .from('articles')
+        .update({
+            title,
+            slug,
+            section_id: sectionId,
+            content,
+            is_published: publish,
+            updated_at: new Date().toISOString(),
+        })
+        .eq('id', articleId);
 
       if (error) throw error;
 
@@ -95,8 +119,8 @@ export default function NewArticlePage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Nouvel Article</h1>
-          <p className="text-sm text-muted-foreground">Créez un nouveau contenu pour le wiki.</p>
+          <h1 className="text-2xl font-bold tracking-tight">Modifier l'Article</h1>
+          <p className="text-sm text-muted-foreground">Mettez à jour le contenu.</p>
         </div>
       </div>
 
@@ -174,7 +198,7 @@ export default function NewArticlePage() {
                     disabled={loading}
                  >
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Publier directement
+                    Mettre à jour et Publier
                  </Button>
                  <Button 
                     variant="secondary" 

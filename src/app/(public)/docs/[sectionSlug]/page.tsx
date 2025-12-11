@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createSupabaseClient } from "@/lib/supabase";
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ChevronRight, FolderOpen } from "lucide-react";
@@ -15,6 +15,7 @@ export const dynamic = "force-dynamic";
 
 export default async function SectionPage({ params }: Props) {
   const { sectionSlug } = params;
+  const supabase = createSupabaseClient();
 
   // 1. Récupérer la section et ses articles
   const { data: section, error } = await supabase

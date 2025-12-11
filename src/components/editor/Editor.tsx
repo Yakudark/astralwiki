@@ -44,6 +44,7 @@ export function Editor({ content, onChange, editable = true }: EditorProps) {
       onChange(editor.getHTML());
     },
     editable,
+    immediatelyRender: false,
   });
 
   const setLink = useCallback(() => {
