@@ -78,10 +78,9 @@ export default async function ContentPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {/* @ts-ignore: nested join typing */}
                       <div className="flex flex-col">
-                        <span className="text-sm">{article.section?.title}</span>
-                        <span className="text-xs text-muted-foreground capitalize">{article.section?.category}</span>
+                        <span className="text-sm">{(article.section as any)?.title}</span>
+                        <span className="text-xs text-muted-foreground capitalize">{(article.section as any)?.category}</span>
                       </div>
                     </TableCell>
                     <TableCell>
