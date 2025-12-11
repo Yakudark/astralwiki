@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 
 export default async function SectionPage({ params }: Props) {
-  const { sectionSlug } = params;
+  const { sectionSlug } = await params;
   const supabase = createSupabaseClient();
 
   // 1. Récupérer la section et ses articles
@@ -26,7 +26,8 @@ export default async function SectionPage({ params }: Props) {
         title,
         slug,
         order_index,
-        content 
+        content,
+        is_published
       )
     `)
     .eq("slug", sectionSlug)
@@ -36,8 +37,10 @@ export default async function SectionPage({ params }: Props) {
     notFound();
   }
 
-  // Trier les articles par order_index
-  const sortedArticles = section.articles?.sort((a: any, b: any) => a.order_index - b.order_index) || [];
+  // Trier les articles par order_index et filtrer les publiés
+  const sortedArticles = section.articles
+    ?.filter((a: any) => a.is_published)
+    .sort((a: any, b: any) => a.order_index - b.order_index) || [];
 
   return (
     <div className="space-y-8">

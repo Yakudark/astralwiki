@@ -47,7 +47,7 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           
           {/* Card 1: Règlements */}
-          <Link href="/docs/reglement-general" className="group">
+          <Link href="/docs/category/reglement" className="group">
             <Card className="h-full bg-card/50 backdrop-blur-sm border-white/5 hover:border-primary/50 transition-all duration-300 hover:shadow-[0_0_20px_-5px_var(--primary)] hover:-translate-y-1 overflow-hidden relative">
                <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
                   <Gavel className="h-24 w-24 -mr-4 -mt-4 rotate-12" />
@@ -59,17 +59,15 @@ export default function Home() {
                 <CardDescription>Les fondements du serveur.</CardDescription>
               </CardHeader>
               <CardContent>
-                 <ul className="text-sm text-muted-foreground space-y-2">
-                    <li className="flex items-center gap-2"><div className="h-1.5 w-1.5 rounded-full bg-primary/50" /> Règlement Général</li>
-                    <li className="flex items-center gap-2"><div className="h-1.5 w-1.5 rounded-full bg-primary/50" /> Règles Illégales</li>
-                    <li className="flex items-center gap-2"><div className="h-1.5 w-1.5 rounded-full bg-primary/50" /> Zones Safe</li>
-                 </ul>
+                 <p className="text-sm text-muted-foreground">
+                   Consultez tous les règlements et directives du serveur.
+                 </p>
               </CardContent>
             </Card>
           </Link>
 
           {/* Card 2: Documents RP */}
-          <Link href="/docs/code-penal" className="group">
+          <Link href="/docs/category/rp" className="group">
             <Card className="h-full bg-card/50 backdrop-blur-sm border-white/5 hover:border-blue-400/50 transition-all duration-300 hover:shadow-[0_0_20px_-5px_rgba(96,165,250,0.5)] hover:-translate-y-1 overflow-hidden relative">
                <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
                   <Book className="h-24 w-24 -mr-4 -mt-4 rotate-12" />
@@ -81,17 +79,15 @@ export default function Home() {
                 <CardDescription>Lois et procédures officielles.</CardDescription>
               </CardHeader>
               <CardContent>
-                 <ul className="text-sm text-muted-foreground space-y-2">
-                    <li className="flex items-center gap-2"><div className="h-1.5 w-1.5 rounded-full bg-blue-400/50" /> Code Pénal</li>
-                    <li className="flex items-center gap-2"><div className="h-1.5 w-1.5 rounded-full bg-blue-400/50" /> Procédures LSPD</li>
-                    <li className="flex items-center gap-2"><div className="h-1.5 w-1.5 rounded-full bg-blue-400/50" /> Tarifs des amendes</li>
-                 </ul>
+                 <p className="text-sm text-muted-foreground">
+                   Lois, procédures et documents officiels du serveur.
+                 </p>
               </CardContent>
             </Card>
           </Link>
 
            {/* Card 3: Guides */}
-           <Link href="/docs/debuter" className="group">
+           <Link href="/docs/category/guide" className="group">
             <Card className="h-full bg-card/50 backdrop-blur-sm border-white/5 hover:border-emerald-500/50 transition-all duration-300 hover:shadow-[0_0_20px_-5px_rgba(16,185,129,0.5)] hover:-translate-y-1 overflow-hidden relative">
                <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
                   <Sparkles className="h-24 w-24 -mr-4 -mt-4 rotate-12" />
@@ -103,11 +99,9 @@ export default function Home() {
                 <CardDescription>Pour bien commencer votre aventure.</CardDescription>
               </CardHeader>
               <CardContent>
-                 <ul className="text-sm text-muted-foreground space-y-2">
-                    <li className="flex items-center gap-2"><div className="h-1.5 w-1.5 rounded-full bg-emerald-500/50" /> Débuter sur Astral</li>
-                    <li className="flex items-center gap-2"><div className="h-1.5 w-1.5 rounded-full bg-emerald-500/50" /> Système de Drogue</li>
-                    <li className="flex items-center gap-2"><div className="h-1.5 w-1.5 rounded-full bg-emerald-500/50" /> Touches & Commandes</li>
-                 </ul>
+                 <p className="text-sm text-muted-foreground">
+                   Guides et tutoriels pour bien démarrer votre aventure.
+                 </p>
               </CardContent>
             </Card>
           </Link>
