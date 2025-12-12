@@ -9,10 +9,18 @@ async function getStats() {
   const supabase = createSupabaseClient();
   const { count: articlesCount } = await supabase.from('articles').select('*', { count: 'exact', head: true });
   const { count: sectionsCount } = await supabase.from('sections').select('*', { count: 'exact', head: true });
+  
+  // Récupérer les 3 derniers articles modifiés
+  const { data: recentArticles } = await supabase
+    .from('articles')
+    .select('id, title, updated_at, is_published')
+    .order('updated_at', { ascending: false })
+    .limit(3);
+  
   // Simulation visites (à connecter à un vrai analytics plus tard)
   const visitsCount = 1254; 
   
-  return { articlesCount, sectionsCount, visitsCount };
+  return { articlesCount, sectionsCount, visitsCount, recentArticles };
 }
 
 export default async function AdminDashboard() {
@@ -94,10 +102,41 @@ export default async function AdminDashboard() {
                </CardDescription>
             </CardHeader>
             <CardContent>
-               <div className="flex flex-col gap-4 text-sm text-muted-foreground text-center py-10">
-                  <p>Pas encore de contenu récent.</p>
-                  {/* Liste à implémenter */}
-               </div>
+               {stats.recentArticles && stats.recentArticles.length > 0 ? (
+                 <div className="space-y-3">
+                   {stats.recentArticles.map((article: any) => (
+                     <Link 
+                       key={article.id} 
+                       href={`/admin/content/${article.id}`}
+                       className="flex items-center justify-between p-3 rounded-lg hover:bg-white/5 transition-colors group"
+                     >
+                       <div className="flex-1">
+                         <p className="font-medium group-hover:text-primary transition-colors">
+                           {article.title}
+                         </p>
+                         <p className="text-xs text-muted-foreground">
+                           {article.updated_at ? new Date(article.updated_at).toLocaleDateString('fr-FR') : 'Date inconnue'}
+                         </p>
+                       </div>
+                       <div>
+                         {article.is_published ? (
+                           <span className="text-xs px-2 py-1 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                             Publié
+                           </span>
+                         ) : (
+                           <span className="text-xs px-2 py-1 rounded bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
+                             Brouillon
+                           </span>
+                         )}
+                       </div>
+                     </Link>
+                   ))}
+                 </div>
+               ) : (
+                 <div className="flex flex-col gap-4 text-sm text-muted-foreground text-center py-10">
+                   <p>Pas encore de contenu récent.</p>
+                 </div>
+               )}
             </CardContent>
          </Card>
 

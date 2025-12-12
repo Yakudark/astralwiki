@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, Plus, FileText, ExternalLink } from "lucide-react";
-import { createSupabaseClient } from "@/lib/supabase";
+import { createSupabaseAdminClient } from "@/lib/supabase";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,8 +21,8 @@ export const revalidate = 0; // Données fraîches à chaque fois
 
 export default async function ContentPage() {
   
-  // Récupérer les données
-  const supabase = createSupabaseClient();
+  // Récupérer les données avec le client admin (bypass RLS)
+  const supabase = createSupabaseAdminClient();
   
   const [articlesRes, sectionsRes] = await Promise.all([
      supabase
@@ -58,6 +58,12 @@ export default async function ContentPage() {
   const articles = articlesRes.data;
   const sections = sectionsRes.data;
 
+  // Debug: compter les brouillons et publiés
+  const draftsCount = articles?.filter(a => !a.is_published).length || 0;
+  const publishedCount = articles?.filter(a => a.is_published).length || 0;
+  console.log('Total articles:', articles?.length, 'Brouillons:', draftsCount);
+  console.log('Articles détails:', articles?.map(a => ({ title: a.title, is_published: a.is_published, type: typeof a.is_published })));
+
   return (
     <div className="space-y-8 text-white">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -69,8 +75,10 @@ export default async function ContentPage() {
 
       <Tabs defaultValue="articles" className="w-full">
         <TabsList className="bg-white/5 border border-white/10 mb-8">
-          <TabsTrigger value="articles">Articles ({articles.length})</TabsTrigger>
-          <TabsTrigger value="sections">Sections ({sections.length})</TabsTrigger>
+          <TabsTrigger value="articles">Tous les articles ({articles?.length || 0})</TabsTrigger>
+          <TabsTrigger value="published">Publiés ({publishedCount})</TabsTrigger>
+          <TabsTrigger value="drafts">Brouillons ({draftsCount})</TabsTrigger>
+          <TabsTrigger value="sections">Sections ({sections?.length || 0})</TabsTrigger>
         </TabsList>
 
         {/* --- Onglet Articles --- */}
@@ -150,6 +158,146 @@ export default async function ContentPage() {
                     <TableRow>
                         <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                             Aucun article trouvé. Commencez par en créer un !
+                        </TableCell>
+                    </TableRow>
+                    )}
+                </TableBody>
+                </Table>
+            </div>
+        </TabsContent>
+
+        {/* --- Onglet Publiés --- */}
+        <TabsContent value="published" className="space-y-4">
+            <div className="flex justify-end">
+                <Link href="/admin/content/new">
+                   <Button className="bg-primary hover:bg-primary/90 text-white gap-2">
+                      <Plus className="h-4 w-4" />
+                      Nouvel Article
+                   </Button>
+                </Link>
+            </div>
+
+            <div className="rounded-md border border-white/10 bg-card/60 backdrop-blur-sm">
+                <Table>
+                <TableHeader className="bg-white/5">
+                    <TableRow className="hover:bg-transparent border-white/5">
+                    <TableHead className="w-[300px]">Titre</TableHead>
+                    <TableHead>Section</TableHead>
+                    <TableHead>Dernière modif.</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {articles && articles.filter((a: any) => a.is_published).length > 0 ? (
+                        articles.filter((a: any) => a.is_published).map((article: any) => (
+                        <TableRow key={article.id} className="hover:bg-white/5 border-white/5">
+                            <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                                {article.title}
+                            </div>
+                            </TableCell>
+                            <TableCell>
+                            <div className="flex flex-col">
+                                <span className="text-sm">{article.section?.title || 'Sans section'}</span>
+                                <span className="text-xs text-muted-foreground capitalize">{article.section?.category}</span>
+                            </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground whitespace-nowrap">
+                            { article.updated_at ? format(new Date(article.updated_at), "d MMM yyyy", { locale: fr }) : "-"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                                <Link href={`/docs/${article.section?.slug}/${article.slug}`} target="_blank">
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white">
+                                    <ExternalLink className="h-4 w-4" />
+                                    </Button>
+                                </Link>
+
+                                <Link href={`/admin/content/${article.id}`}>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10">
+                                    <Edit className="h-4 w-4" />
+                                    </Button>
+                                </Link>
+                                
+                                <Button variant="ghost" size="icon" disabled className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-400/10 opacity-50 cursor-not-allowed">
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            </TableCell>
+                        </TableRow>
+                        ))
+                    ) : (
+                    <TableRow>
+                        <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                            Aucun article publié pour le moment.
+                        </TableCell>
+                    </TableRow>
+                    )}
+                </TableBody>
+                </Table>
+            </div>
+        </TabsContent>
+
+        {/* --- Onglet Brouillons --- */}
+        <TabsContent value="drafts" className="space-y-4">
+            <div className="flex justify-end">
+                <Link href="/admin/content/new">
+                   <Button className="bg-primary hover:bg-primary/90 text-white gap-2">
+                      <Plus className="h-4 w-4" />
+                      Nouvel Article
+                   </Button>
+                </Link>
+            </div>
+
+            <div className="rounded-md border border-white/10 bg-card/60 backdrop-blur-sm">
+                <Table>
+                <TableHeader className="bg-white/5">
+                    <TableRow className="hover:bg-transparent border-white/5">
+                    <TableHead className="w-[300px]">Titre</TableHead>
+                    <TableHead>Section</TableHead>
+                    <TableHead>Dernière modif.</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {articles && articles.filter(a => !a.is_published).length > 0 ? (
+                        articles.filter(a => !a.is_published).map((article) => (
+                        <TableRow key={article.id} className="hover:bg-white/5 border-white/5 data-[state=selected]:bg-muted">
+                            <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                                {article.title}
+                            </div>
+                            </TableCell>
+                            <TableCell>
+                            <div className="flex flex-col">
+                                <span className="text-sm">{(article.section as any)?.title || 'Sans section'}</span>
+                                <span className="text-xs text-muted-foreground capitalize">{(article.section as any)?.category}</span>
+                            </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground whitespace-nowrap">
+                            { article.updated_at ? format(new Date(article.updated_at), "d MMM yyyy", { locale: fr }) : "-"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                                <Link href={`/admin/content/${article.id}`}>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10">
+                                    <Edit className="h-4 w-4" />
+                                    </Button>
+                                </Link>
+                                
+                                <Button variant="ghost" size="icon" disabled className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-400/10 opacity-50 cursor-not-allowed">
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            </TableCell>
+                        </TableRow>
+                        ))
+                    ) : (
+                    <TableRow>
+                        <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                            Aucun brouillon. Tous vos articles sont publiés !
                         </TableCell>
                     </TableRow>
                     )}

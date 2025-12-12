@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { createSupabaseClient } from "@/lib/supabase";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, User } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ArrowLeft, Calendar, User, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -41,6 +42,14 @@ export default async function ArticlePage({ params }: Props) {
   if ((article.section as any)?.slug !== sectionSlug) {
     notFound();
   }
+
+  // Récupérer les sous-articles (si l'article en a)
+  const { data: subArticles } = await supabase
+    .from("articles")
+    .select("id, title, slug, content")
+    .eq("parent_article_id", article.id)
+    .eq("is_published", true)
+    .order("order_index", { ascending: true });
 
   return (
     <div className="space-y-8 max-w-4xl">
@@ -98,6 +107,34 @@ export default async function ArticlePage({ params }: Props) {
           prose-pre:bg-secondary prose-pre:border prose-pre:border-border"
         dangerouslySetInnerHTML={{ __html: article.content || "" }}
       />
+
+      {/* Sub-Articles Section */}
+      {subArticles && subArticles.length > 0 && (
+        <div className="pt-8 border-t border-border/50 space-y-4">
+          <h2 className="text-2xl font-bold tracking-tight">Articles liés</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {subArticles.map((subArticle: any) => (
+              <Link 
+                key={subArticle.id}
+                href={`/docs/${sectionSlug}/${subArticle.slug}`}
+                className="group block"
+              >
+                <Card className="h-full transition-all duration-200 hover:border-primary/50 hover:bg-secondary/30 hover:shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="text-lg group-hover:text-primary transition-colors flex items-center justify-between">
+                      {subArticle.title}
+                      <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                    </CardTitle>
+                    <CardDescription className="line-clamp-2">
+                      {subArticle.content?.replace(/<[^>]*>?/gm, "").substring(0, 100)}...
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Footer Navigation */}
       <div className="pt-8 border-t border-border/50">

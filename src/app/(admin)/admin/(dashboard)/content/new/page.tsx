@@ -29,20 +29,26 @@ export default function NewArticlePage() {
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [sectionId, setSectionId] = useState("");
+  const [parentArticleId, setParentArticleId] = useState("");
   const [content, setContent] = useState("<p>Commencez à rédiger...</p>");
   const [sections, setSections] = useState<any[]>([]);
+  const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [initLoading, setInitLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Charger les sections disponibles
+  // Charger les sections et articles disponibles
   useEffect(() => {
-    async function loadSections() {
-      const { data } = await supabaseBrowser.from("sections").select('*');
-      if (data) setSections(data);
+    async function loadData() {
+      const [sectionsRes, articlesRes] = await Promise.all([
+        supabaseBrowser.from("sections").select('*'),
+        supabaseBrowser.from("articles").select('id, title').eq('parent_article_id', null).order('title')
+      ]);
+      if (sectionsRes.data) setSections(sectionsRes.data);
+      if (articlesRes.data) setArticles(articlesRes.data);
       setInitLoading(false);
     }
-    loadSections();
+    loadData();
   }, []);
 
   // Auto-generate slug from title
@@ -68,6 +74,7 @@ export default function NewArticlePage() {
         title,
         slug,
         section_id: sectionId,
+        parent_article_id: parentArticleId || null,
         content,
         is_published: publish,
         order_index: 99 // Put at end by default
@@ -75,8 +82,13 @@ export default function NewArticlePage() {
 
       if (error) throw error;
 
-      router.push('/admin/content');
-      router.refresh();
+      // Rediriger avec timestamp pour forcer le refresh
+      const timestamp = Date.now();
+      if (publish) {
+        router.push(`/admin/content?t=${timestamp}`);
+      } else {
+        router.push(`/admin/content?t=${timestamp}`);
+      }
 
     } catch (err: any) {
       setError(err.message || "Erreur lors de la sauvegarde.");
@@ -164,6 +176,20 @@ export default function NewArticlePage() {
                         {sections.filter(s => s.category === 'guide').map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
                     </optgroup>
                  </select>
+               </div>
+
+               <div className="space-y-2">
+                 <Label htmlFor="parentArticle">Article Parent (optionnel)</Label>
+                 <select 
+                    id="parentArticle"
+                    className="flex h-10 w-full rounded-md border border-input bg-background/50 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={parentArticleId}
+                    onChange={e => setParentArticleId(e.target.value)}
+                 >
+                    <option value="">-- Aucun (article principal) --</option>
+                    {articles.map(a => <option key={a.id} value={a.id}>{a.title}</option>)}
+                 </select>
+                 <p className="text-[10px] text-muted-foreground">Si sélectionné, cet article sera un sous-article</p>
                </div>
 
                <div className="pt-4 flex flex-col gap-2">

@@ -13,7 +13,7 @@ export default function Home() {
         <div className="relative z-10 flex flex-col items-center text-center space-y-6">
           <Badge variant="outline" className="px-4 py-1 text-primary border-primary/50 bg-primary/10 backdrop-blur-md animate-pulse">
             <Sparkles className="mr-2 h-3 w-3" />
-            Astral Roleplay V2
+            Astral Roleplay V3
           </Badge>
           
           <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">
