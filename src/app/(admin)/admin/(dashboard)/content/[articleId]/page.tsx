@@ -46,7 +46,7 @@ export default function EditArticlePage() {
             // 1. Fetch sections and articles
             const [sectionsRes, articlesRes] = await Promise.all([
                 supabaseBrowser.from("sections").select('*'),
-                supabaseBrowser.from("articles").select('id, title').neq('id', articleId).eq('parent_article_id', null).order('title')
+                supabaseBrowser.from("articles").select('id, title').neq('id', articleId).not('parent_article_id', 'is', null).order('title') // Changement ici
             ]);
             if (sectionsRes.error) throw sectionsRes.error;
             if (sectionsRes.data) setSections(sectionsRes.data);
@@ -91,6 +91,8 @@ export default function EditArticlePage() {
     setLoading(true);
     setError(null);
 
+    console.log("Content being submitted:", content); // AJOUT DE CONSOLE.LOG ICI
+
     try {
       const { error } = await supabaseBrowser
         .from('articles')
@@ -107,9 +109,8 @@ export default function EditArticlePage() {
 
       if (error) throw error;
 
-      // Rediriger avec timestamp pour forcer le refresh
-      const timestamp = Date.now();
-      router.push(`/admin/content?t=${timestamp}`);
+      // Rediriger sans timestamp
+      router.push(`/admin/content`);
 
     } catch (err: any) {
       setError(err.message || "Erreur lors de la sauvegarde.");

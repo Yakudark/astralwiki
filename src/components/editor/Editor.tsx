@@ -1,12 +1,23 @@
 "use client";
 
 import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
+// import StarterKit from '@tiptap/starter-kit'; // Supprimé
+import Document from '@tiptap/extension-document';
+import Paragraph from '@tiptap/extension-paragraph';
+import Text from '@tiptap/extension-text';
+import Bold from '@tiptap/extension-bold';
+import Italic from '@tiptap/extension-italic';
+import BulletList from '@tiptap/extension-bullet-list';
+import OrderedList from '@tiptap/extension-ordered-list';
+import ListItem from '@tiptap/extension-list-item';
+import Blockquote from '@tiptap/extension-blockquote';
+import Heading from '@tiptap/extension-heading';
+import History from '@tiptap/extension-history'; 
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
-import { Button } from '@/components/ui/button';
-import { 
-  Bold, Italic, List, ListOrdered, Quote, Undo, Redo, 
+import { Button } from '@/components/ui/button'; // Import du composant Button
+import {
+  Bold as BoldIcon, Italic as ItalicIcon, List, ListOrdered, Quote, Undo, Redo, 
   Heading2, Heading3, Link as LinkIcon, Image as ImageIcon 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -21,7 +32,19 @@ type EditorProps = {
 export function Editor({ content, onChange, editable = true }: EditorProps) {
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      Document,
+      Paragraph,
+      Text,
+      Bold,
+      Italic,
+      BulletList,
+      OrderedList,
+      ListItem,
+      Blockquote,
+      Heading.configure({
+        levels: [1, 2, 3], // Configurer les niveaux de titres souhaités
+      }),
+      History, 
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
@@ -76,13 +99,13 @@ export function Editor({ content, onChange, editable = true }: EditorProps) {
             <ToolbarButton 
                 onClick={() => editor.chain().focus().toggleBold().run()}
                 active={editor.isActive('bold')}
-                icon={Bold}
+                icon={BoldIcon}
                 tooltip="Gras"
             />
             <ToolbarButton 
                 onClick={() => editor.chain().focus().toggleItalic().run()}
                 active={editor.isActive('italic')}
-                icon={Italic}
+                icon={ItalicIcon}
                 tooltip="Italique"
             />
             <div className="w-px h-6 bg-white/10 mx-1" />

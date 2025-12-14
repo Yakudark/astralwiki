@@ -19,6 +19,7 @@ CREATE TABLE sections (
 CREATE TABLE articles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     section_id UUID REFERENCES sections(id) ON DELETE CASCADE,
+    parent_article_id UUID REFERENCES articles(id) ON DELETE SET NULL, -- AJOUTÉE ICI
     title TEXT NOT NULL,
     slug TEXT NOT NULL,
     content TEXT, 

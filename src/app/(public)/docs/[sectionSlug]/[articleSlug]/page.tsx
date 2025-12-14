@@ -98,7 +98,7 @@ export default async function ArticlePage({ params }: Props) {
           prose-headings:font-bold prose-headings:tracking-tight
           prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4
           prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-3
-          prose-p:text-muted-foreground prose-p:leading-7
+          prose-p:text-muted-foreground prose-p:leading-7 prose-p:my-4
           prose-a:text-primary prose-a:no-underline hover:prose-a:underline
           prose-strong:text-foreground prose-strong:font-semibold
           prose-ul:my-4 prose-li:my-2

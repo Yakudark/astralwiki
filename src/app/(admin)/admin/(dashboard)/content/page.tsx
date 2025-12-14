@@ -1,5 +1,8 @@
+"use client";
 
 import Link from "next/link";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { 
   Table, 
@@ -10,59 +13,233 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Plus, FileText, ExternalLink } from "lucide-react";
-import { createSupabaseAdminClient } from "@/lib/supabase";
+import { Edit, Trash2, Plus, FileText, ExternalLink, Loader2 } from "lucide-react";
+import { supabaseBrowser } from "@/lib/supabase-browser"; // For client-side fetching
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SectionsManager } from "./components/SectionsManager";
+import { DeleteArticleButton } from "./components/DeleteArticleButton";
+import { SortableTableBody } from "./components/SortableTableBody";
+import { 
+  Select, 
+  SelectContent, 
+  SelectGroup, 
+  SelectItem, 
+  SelectLabel, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 
-export const revalidate = 0; // Données fraîches à chaque fois
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import { 
+  SortableContext, 
+  sortableKeyboardCoordinates, 
+  verticalListSortingStrategy, 
+  useSortable 
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { toast } from "react-hot-toast";
 
-export default async function ContentPage() {
-  
-  // Récupérer les données avec le client admin (bypass RLS)
-  const supabase = createSupabaseAdminClient();
-  
-  const [articlesRes, sectionsRes] = await Promise.all([
-     supabase
-      .from("articles")
-      .select(`
-        id, 
-        title, 
-        slug, 
-        is_published, 
-        updated_at,
-        section:sections (
-          id,
-          title,
-          category,
-          slug
-        )
-      `)
-      .order("updated_at", { ascending: false }),
-      
-      supabase
-      .from("sections")
-      .select("*")
-      .order("title")
-  ]);
+// Composant SortableItem pour les lignes du tableau
+// Ce composant est maintenant déplacé dans SortableTableBody.tsx
+// function SortableItem({ children, id }: { children: React.ReactNode, id: string }) {
+//   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: id });
+//   const style = {
+//     transform: CSS.Transform.toString(transform),
+//     transition,
+//     cursor: 'grab',
+//   };
 
-  if (articlesRes.error) {
-     return <div className="text-red-500">Erreur lors du chargement des articles: {articlesRes.error.message}</div>;
+//   return (
+//     <TableRow ref={setNodeRef} style={style} {...attributes} {...listeners}>
+//       {children}
+//     </TableRow>
+//   );
+// }
+
+export default function ContentPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialSectionId = searchParams.get("section") || "all"; // Modifier ici pour utiliser "all"
+
+  const [articles, setArticles] = useState<any[]>([]);
+  const [sections, setSections] = useState<any[]>([]);
+  const [selectedSection, setSelectedSection] = useState<string>(initialSectionId);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // DND Kit sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Fonction de gestion du glisser-déposer (maintenant dans le parent)
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    console.log("Drag ended. Active ID:", active.id, "Over ID:", over?.id);
+
+    if (active.id !== over?.id) {
+      const oldIndex = articles.findIndex((item) => item.id === active.id);
+      const newIndex = articles.findIndex((item) => item.id === over?.id);
+
+      if (oldIndex === -1 || newIndex === -1) {
+        console.log("Invalid indices. Old: ", oldIndex, "New: ", newIndex); 
+        return;
+      }
+
+      const newOrderedArticles = [...articles];
+      const [movedItem] = newOrderedArticles.splice(oldIndex, 1);
+      newOrderedArticles.splice(newIndex, 0, movedItem);
+
+      console.log("Updating local state with new order:", newOrderedArticles.map(a => a.id)); 
+      setArticles(newOrderedArticles);
+
+      const reorderedArticlesForApi = newOrderedArticles.map((item, index) => ({
+        id: item.id,
+        order_index: index,
+      }));
+
+      console.log("Sending reorder data to API:", reorderedArticlesForApi); 
+
+      try {
+        const response = await fetch("/api/admin/articles/reorder", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(reorderedArticlesForApi),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("API Error Response:", errorData); 
+          throw new Error(errorData.error || "Erreur lors de la réorganisation des articles.");
+        }
+
+        toast.success("Ordre des articles mis à jour avec succès !");
+        console.log("API call successful."); 
+      } catch (apiError: any) {
+        toast.error(apiError.message || "La réorganisation a échoué.");
+        console.error("Caught API error:", apiError); 
+        setArticles(articles); 
+      }
+    }
+  };
+
+  useEffect(() => {
+    async function fetchContent() {
+      setLoading(true);
+      setError(null);
+      try {
+        const supabase = supabaseBrowser; // Use browser client for client component
+
+        let articlesQuery = supabase
+            .from("articles")
+            .select(`
+              id, 
+              title, 
+              slug, 
+              is_published, 
+              updated_at,
+              order_index,
+              section:sections (
+                id,
+                title,
+                category,
+                slug
+              )
+            `)
+            .order("order_index", { ascending: true }) // Trier par order_index
+            .order("updated_at", { ascending: false }); // Puis par updated_at
+            
+        // Appliquer le filtre de section uniquement si une section est sélectionnée (pas "all" ou vide)
+        if (selectedSection && selectedSection !== "all") {
+            articlesQuery = articlesQuery.eq("section_id", selectedSection);
+        }
+
+          const [articlesRes, sectionsRes] = await Promise.all([
+            articlesQuery, // Utilisez la requête d'articles modifiée
+            supabase
+              .from("sections")
+              .select("*")
+              .order("title")
+          ]);
+
+        if (articlesRes.error) throw articlesRes.error;
+        if (sectionsRes.error) throw sectionsRes.error;
+
+        setArticles(articlesRes.data || []);
+        setSections(sectionsRes.data || []);
+
+      } catch (err: any) {
+        console.error("Erreur lors du chargement du contenu:", err);
+        setError(err.message || "Erreur lors du chargement du contenu.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchContent();
+  }, [selectedSection]); // Re-fetch when selectedSection changes
+
+  // Update URL search params when selectedSection changes
+  useEffect(() => {
+    // Obtenir les searchParams directement de l'URL actuelle pour éviter les problèmes de référence dans les dépendances
+    const currentSearchParams = new URLSearchParams(window.location.search);
+    const currentSectionParamInUrl = currentSearchParams.get("section");
+    console.log("currentSectionParamInUrl (from URL - fresh):", currentSectionParamInUrl); // Debugging
+
+    // Déterminer la valeur souhaitée pour le paramètre 'section' dans l'URL
+    let desiredSectionParamForUrl: string = ""; // Utiliser une chaîne vide pour "pas de section" ou "toutes les sections"
+    if (selectedSection && selectedSection !== "all") {
+      desiredSectionParamForUrl = selectedSection;
+    }
+    console.log("desiredSectionParamForUrl (based on state):", desiredSectionParamForUrl); // Debugging
+
+    // Normaliser le paramètre actuel de l'URL pour la comparaison (null devient chaîne vide)
+    const normalizedCurrentSectionParam = currentSectionParamInUrl === null ? "" : currentSectionParamInUrl;
+
+    // Vérifier si le paramètre de l'URL a réellement besoin de changer
+    if (desiredSectionParamForUrl !== normalizedCurrentSectionParam) {
+      console.log("Section param in URL needs update. Replacing URL..."); // Debugging
+      const newParams = new URLSearchParams();
+      if (desiredSectionParamForUrl) { // Ne définir le paramètre que si c'est un ID de section spécifique
+        newParams.set("section", desiredSectionParamForUrl);
+      }
+      // Si desiredSectionParamForUrl est "", newParams.toString() sera vide, ce qui mènera à /admin/content
+      router.replace(`/admin/content${newParams.toString() ? `?${newParams.toString()}` : ''}`);
+    } else {
+      console.log("Section param in URL is already correct. No action."); // Debugging
+    }
+  }, [selectedSection, router]); // searchParams retiré des dépendances
+
+  const draftsCount = articles.filter(a => !a.is_published).length;
+  const publishedCount = articles.filter(a => a.is_published).length;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-48 text-white">
+        <Loader2 className="mr-2 h-8 w-8 animate-spin" />
+        Chargement du contenu...
+      </div>
+    );
   }
-  if (sectionsRes.error) {
-     return <div className="text-red-500">Erreur lors du chargement des sections: {sectionsRes.error.message}</div>;
+
+  if (error) {
+    return <div className="text-red-500 p-4">Erreur: {error}</div>;
   }
-
-  const articles = articlesRes.data;
-  const sections = sectionsRes.data;
-
-  // Debug: compter les brouillons et publiés
-  const draftsCount = articles?.filter(a => !a.is_published).length || 0;
-  const publishedCount = articles?.filter(a => a.is_published).length || 0;
-  console.log('Total articles:', articles?.length, 'Brouillons:', draftsCount);
-  console.log('Articles détails:', articles?.map(a => ({ title: a.title, is_published: a.is_published, type: typeof a.is_published })));
 
   return (
     <div className="space-y-8 text-white">
@@ -70,6 +247,28 @@ export default async function ContentPage() {
         <div>
            <h1 className="text-3xl font-bold tracking-tight">Gestion du Contenu</h1>
            <p className="text-muted-foreground">Gérez vos articles, guides et règlements.</p>
+        </div>
+        <div className="flex items-center gap-2">
+            <Select onValueChange={setSelectedSection} value={selectedSection}>
+                <SelectTrigger className="w-[180px] bg-black/20 border-white/10 text-white">
+                    <SelectValue placeholder="Filtrer par section" />
+                </SelectTrigger>
+                <SelectContent className="bg-background text-white border-white/10">
+                    <SelectGroup>
+                        <SelectLabel>Sections</SelectLabel>
+                        <SelectItem value="all">Toutes les sections</SelectItem>
+                        {sections.map(section => (
+                            <SelectItem key={section.id} value={section.id}>{section.title}</SelectItem>
+                        ))}
+                    </SelectGroup>
+                </SelectContent>
+            </Select>
+            <Link href="/admin/content/new">
+                <Button className="bg-primary hover:bg-primary/90 text-white gap-2">
+                    <Plus className="h-4 w-4" />
+                    Nouvel Article
+                </Button>
+            </Link>
         </div>
       </div>
 
@@ -83,226 +282,107 @@ export default async function ContentPage() {
 
         {/* --- Onglet Articles --- */}
         <TabsContent value="articles" className="space-y-4">
-            <div className="flex justify-end">
-                <Link href="/admin/content/new">
-                   <Button className="bg-primary hover:bg-primary/90 text-white gap-2">
-                      <Plus className="h-4 w-4" />
-                      Nouvel Article
-                   </Button>
-                </Link>
-            </div>
-
             <div className="rounded-md border border-white/10 bg-card/60 backdrop-blur-sm">
-                <Table>
-                <TableHeader className="bg-white/5">
-                    <TableRow className="hover:bg-transparent border-white/5">
-                    <TableHead className="w-[300px]">Titre</TableHead>
-                    <TableHead>Section</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Dernière modif.</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
+                <DndContext 
+                  sensors={sensors} 
+                  collisionDetection={closestCenter} 
+                  onDragEnd={handleDragEnd}
+                >
+                  <Table>
+                    <TableHeader className="bg-white/5">
+                        <TableRow className="hover:bg-transparent border-white/5">
+                        <TableHead className="w-[300px]">Titre</TableHead>
+                        <TableHead>Section</TableHead>
+                        <TableHead>Statut</TableHead>
+                        <TableHead>Dernière modif.</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
                     {articles && articles.length > 0 ? (
-                        articles.map((article) => (
-                        <TableRow key={article.id} className="hover:bg-white/5 border-white/5 data-[state=selected]:bg-muted">
-                            <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                                <FileText className="h-4 w-4 text-muted-foreground" />
-                                {article.title}
-                            </div>
-                            </TableCell>
-                            <TableCell>
-                            <div className="flex flex-col">
-                                <span className="text-sm">{(article.section as any)?.title || 'Sans section'}</span>
-                                <span className="text-xs text-muted-foreground capitalize">{(article.section as any)?.category}</span>
-                            </div>
-                            </TableCell>
-                            <TableCell>
-                            {article.is_published ? (
-                                <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20">Publié</Badge>
-                            ) : (
-                                <Badge variant="outline" className="text-yellow-500 border-yellow-500/30">Brouillon</Badge>
-                            )}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground whitespace-nowrap">
-                            { article.updated_at ? format(new Date(article.updated_at), "d MMM yyyy", { locale: fr }) : "-"}
-                            </TableCell>
-                            <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                                {/* Voir l'article (si publié) */}
-                                {article.is_published && (article.section as any) && (
-                                    <Link href={`/docs/${(article.section as any).slug}/${article.slug}`} target="_blank">
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white">
-                                        <ExternalLink className="h-4 w-4" />
-                                        </Button>
-                                    </Link>
-                                )}
-
-                                <Link href={`/admin/content/${article.id}`}>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10">
-                                    <Edit className="h-4 w-4" />
-                                    </Button>
-                                </Link>
-                                
-                                {/* Delete : Nécessiterait un Client Component pour l'interactivité. On fera une page Edit pour commencer. */}
-                                <Button variant="ghost" size="icon" disabled className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-400/10 opacity-50 cursor-not-allowed">
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
+                        <TableBody>
+                          <SortableTableBody articles={articles} />
+                        </TableBody>
+                    ) : (
+                        <TableBody>
+                        <TableRow>
+                            <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                Aucun article trouvé. Commencez par en créer un !
                             </TableCell>
                         </TableRow>
-                        ))
-                    ) : (
-                    <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                            Aucun article trouvé. Commencez par en créer un !
-                        </TableCell>
-                    </TableRow>
-                    )}
-                </TableBody>
-                </Table>
+                        </TableBody>
+                        )}
+                  </Table>
+                </DndContext>
             </div>
         </TabsContent>
 
         {/* --- Onglet Publiés --- */}
         <TabsContent value="published" className="space-y-4">
-            <div className="flex justify-end">
-                <Link href="/admin/content/new">
-                   <Button className="bg-primary hover:bg-primary/90 text-white gap-2">
-                      <Plus className="h-4 w-4" />
-                      Nouvel Article
-                   </Button>
-                </Link>
-            </div>
-
             <div className="rounded-md border border-white/10 bg-card/60 backdrop-blur-sm">
-                <Table>
-                <TableHeader className="bg-white/5">
-                    <TableRow className="hover:bg-transparent border-white/5">
-                    <TableHead className="w-[300px]">Titre</TableHead>
-                    <TableHead>Section</TableHead>
-                    <TableHead>Dernière modif.</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
+                <DndContext 
+                  sensors={sensors} 
+                  collisionDetection={closestCenter} 
+                  onDragEnd={handleDragEnd}
+                >
+                  <Table>
+                    <TableHeader className="bg-white/5">
+                        <TableRow className="hover:bg-transparent border-white/5">
+                        <TableHead className="w-[300px]">Titre</TableHead>
+                        <TableHead>Section</TableHead>
+                        <TableHead>Dernière modif.</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
                     {articles && articles.filter((a: any) => a.is_published).length > 0 ? (
-                        articles.filter((a: any) => a.is_published).map((article: any) => (
-                        <TableRow key={article.id} className="hover:bg-white/5 border-white/5">
-                            <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                                <FileText className="h-4 w-4 text-muted-foreground" />
-                                {article.title}
-                            </div>
-                            </TableCell>
-                            <TableCell>
-                            <div className="flex flex-col">
-                                <span className="text-sm">{article.section?.title || 'Sans section'}</span>
-                                <span className="text-xs text-muted-foreground capitalize">{article.section?.category}</span>
-                            </div>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground whitespace-nowrap">
-                            { article.updated_at ? format(new Date(article.updated_at), "d MMM yyyy", { locale: fr }) : "-"}
-                            </TableCell>
-                            <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                                <Link href={`/docs/${article.section?.slug}/${article.slug}`} target="_blank">
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white">
-                                    <ExternalLink className="h-4 w-4" />
-                                    </Button>
-                                </Link>
-
-                                <Link href={`/admin/content/${article.id}`}>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10">
-                                    <Edit className="h-4 w-4" />
-                                    </Button>
-                                </Link>
-                                
-                                <Button variant="ghost" size="icon" disabled className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-400/10 opacity-50 cursor-not-allowed">
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
+                        <TableBody>
+                          <SortableTableBody articles={articles.filter((a: any) => a.is_published)} />
+                        </TableBody>
+                    ) : (
+                        <TableBody>
+                        <TableRow>
+                            <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                                Aucun article publié pour le moment.
                             </TableCell>
                         </TableRow>
-                        ))
-                    ) : (
-                    <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                            Aucun article publié pour le moment.
-                        </TableCell>
-                    </TableRow>
-                    )}
-                </TableBody>
-                </Table>
+                        </TableBody>
+                        )}
+                  </Table>
+                </DndContext>
             </div>
         </TabsContent>
 
         {/* --- Onglet Brouillons --- */}
         <TabsContent value="drafts" className="space-y-4">
-            <div className="flex justify-end">
-                <Link href="/admin/content/new">
-                   <Button className="bg-primary hover:bg-primary/90 text-white gap-2">
-                      <Plus className="h-4 w-4" />
-                      Nouvel Article
-                   </Button>
-                </Link>
-            </div>
-
             <div className="rounded-md border border-white/10 bg-card/60 backdrop-blur-sm">
-                <Table>
-                <TableHeader className="bg-white/5">
-                    <TableRow className="hover:bg-transparent border-white/5">
-                    <TableHead className="w-[300px]">Titre</TableHead>
-                    <TableHead>Section</TableHead>
-                    <TableHead>Dernière modif.</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
+                <DndContext 
+                  sensors={sensors} 
+                  collisionDetection={closestCenter} 
+                  onDragEnd={handleDragEnd}
+                >
+                  <Table>
+                    <TableHeader className="bg-white/5">
+                        <TableRow className="hover:bg-transparent border-white/5">
+                        <TableHead className="w-[300px]">Titre</TableHead>
+                        <TableHead>Section</TableHead>
+                        <TableHead>Dernière modif.</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
                     {articles && articles.filter(a => !a.is_published).length > 0 ? (
-                        articles.filter(a => !a.is_published).map((article) => (
-                        <TableRow key={article.id} className="hover:bg-white/5 border-white/5 data-[state=selected]:bg-muted">
-                            <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                                <FileText className="h-4 w-4 text-muted-foreground" />
-                                {article.title}
-                            </div>
-                            </TableCell>
-                            <TableCell>
-                            <div className="flex flex-col">
-                                <span className="text-sm">{(article.section as any)?.title || 'Sans section'}</span>
-                                <span className="text-xs text-muted-foreground capitalize">{(article.section as any)?.category}</span>
-                            </div>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground whitespace-nowrap">
-                            { article.updated_at ? format(new Date(article.updated_at), "d MMM yyyy", { locale: fr }) : "-"}
-                            </TableCell>
-                            <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                                <Link href={`/admin/content/${article.id}`}>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10">
-                                    <Edit className="h-4 w-4" />
-                                    </Button>
-                                </Link>
-                                
-                                <Button variant="ghost" size="icon" disabled className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-400/10 opacity-50 cursor-not-allowed">
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
+                        <TableBody>
+                          <SortableTableBody articles={articles.filter(a => !a.is_published)} />
+                        </TableBody>
+                    ) : (
+                        <TableBody>
+                        <TableRow>
+                            <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                                Aucun brouillon. Tous vos articles sont publiés !
                             </TableCell>
                         </TableRow>
-                        ))
-                    ) : (
-                    <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                            Aucun brouillon. Tous vos articles sont publiés !
-                        </TableCell>
-                    </TableRow>
-                    )}
-                </TableBody>
-                </Table>
+                        </TableBody>
+                        )}
+                  </Table>
+                </DndContext>
             </div>
         </TabsContent>
 
