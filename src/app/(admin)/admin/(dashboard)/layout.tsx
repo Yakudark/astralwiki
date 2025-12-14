@@ -1,4 +1,5 @@
 import { AdminSidebar } from "@/components/layout/AdminSidebar";
+import { Suspense } from "react";
 
 export default function AdminLayout({
   children,
@@ -10,7 +11,9 @@ export default function AdminLayout({
       <AdminSidebar />
       <main className="flex-1 md:pl-64 transition-all duration-300 ease-in-out">
          <div className="p-6 md:p-10 fade-in-section">
-            {children}
+            <Suspense fallback={<div>Chargement...</div>}>
+              {children}
+            </Suspense>
          </div>
       </main>
     </div>
