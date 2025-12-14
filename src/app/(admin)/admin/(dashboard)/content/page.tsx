@@ -77,6 +77,10 @@ export default function ContentPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const handleArticleDeletedLocally = (deletedArticleId: string) => {
+    setArticles(prevArticles => prevArticles.filter(article => article.id !== deletedArticleId));
+  };
+
   // DND Kit sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -300,7 +304,7 @@ export default function ContentPage() {
                     </TableHeader>
                     {articles && articles.length > 0 ? (
                         <TableBody>
-                          <SortableTableBody articles={articles} />
+                          <SortableTableBody articles={articles} onArticleDeletedLocally={handleArticleDeletedLocally} />
                         </TableBody>
                     ) : (
                         <TableBody>
@@ -335,7 +339,10 @@ export default function ContentPage() {
                     </TableHeader>
                     {articles && articles.filter((a: any) => a.is_published).length > 0 ? (
                         <TableBody>
-                          <SortableTableBody articles={articles.filter((a: any) => a.is_published)} />
+                          <SortableTableBody 
+                            articles={articles.filter((a: any) => a.is_published)} 
+                            onArticleDeletedLocally={handleArticleDeletedLocally}
+                          />
                         </TableBody>
                     ) : (
                         <TableBody>
@@ -370,7 +377,10 @@ export default function ContentPage() {
                     </TableHeader>
                     {articles && articles.filter(a => !a.is_published).length > 0 ? (
                         <TableBody>
-                          <SortableTableBody articles={articles.filter(a => !a.is_published)} />
+                          <SortableTableBody 
+                            articles={articles.filter(a => !a.is_published)} 
+                            onArticleDeletedLocally={handleArticleDeletedLocally}
+                          />
                         </TableBody>
                     ) : (
                         <TableBody>

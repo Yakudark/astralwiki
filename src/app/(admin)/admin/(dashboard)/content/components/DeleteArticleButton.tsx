@@ -7,7 +7,13 @@ import { Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabaseBrowser } from "@/lib/supabase-browser"; // AJOUT
 
-export function DeleteArticleButton({ articleId }: { articleId: string }) {
+export function DeleteArticleButton({
+  articleId,
+  onArticleDeletedLocally, // AJOUT
+}: {
+  articleId: string;
+  onArticleDeletedLocally?: (deletedArticleId: string) => void; // AJOUT
+}) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -35,6 +41,9 @@ export function DeleteArticleButton({ articleId }: { articleId: string }) {
 
       toast.success("Article supprimé avec succès !");
       router.refresh();
+      if (onArticleDeletedLocally) {
+        onArticleDeletedLocally(articleId); // Appel du callback
+      }
     } catch (error) {
       if (error instanceof Error) {
         toast.error(error.message || "La suppression a échoué.");

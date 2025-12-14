@@ -28,7 +28,13 @@ import {
   import { DeleteArticleButton } from "./DeleteArticleButton";
   
   // Composant SortableItem pour les lignes du tableau
-  function SortableItem({ article }: { article: any }) {
+  function SortableItem({
+    article,
+    onArticleDeletedLocally,
+  }: { 
+    article: any;
+    onArticleDeletedLocally?: (deletedArticleId: string) => void;
+  }) {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: article.id });
     const style = {
       transform: CSS.Transform.toString(transform),
@@ -84,7 +90,7 @@ import {
               </Link>
             </Button>
             
-            <DeleteArticleButton articleId={article.id} />
+            <DeleteArticleButton articleId={article.id} onArticleDeletedLocally={onArticleDeletedLocally} />
           </div>
         </TableCell>
       </TableRow>
@@ -93,17 +99,18 @@ import {
   
   interface SortableTableBodyProps {
     articles: any[];
+    onArticleDeletedLocally?: (deletedArticleId: string) => void;
     // handleDragEnd n'est plus passé ici
   }
   
-  export function SortableTableBody({ articles }: SortableTableBodyProps) {
+  export function SortableTableBody({ articles, onArticleDeletedLocally }: SortableTableBodyProps) {
     return (
       <SortableContext 
         items={articles.map(article => article.id)}
         strategy={verticalListSortingStrategy}
       >
         {articles.map((article) => (
-          <SortableItem key={article.id} article={article} />
+          <SortableItem key={article.id} article={article} onArticleDeletedLocally={onArticleDeletedLocally} />
         ))}
       </SortableContext>
     );
