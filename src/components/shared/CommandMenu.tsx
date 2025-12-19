@@ -38,7 +38,7 @@ export function CommandMenu({
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen(!open);
+        setOpen((open: boolean) => !open);
       }
     };
     document.addEventListener("keydown", down);
