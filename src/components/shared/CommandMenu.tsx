@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
@@ -16,17 +16,17 @@ interface Article {
   id: string;
   title: string;
   slug: string;
-  section: { slug: string };
+  section: { slug: string }[]; // ✅ tableau
 }
 
 export function CommandMenu({
   open,
   setOpen,
-  onArticleSelected, // AJOUT
+  onArticleSelected,
 }: {
   open: boolean;
-  setOpen: (open: boolean) => void;
-  onArticleSelected?: (sectionSlug: string, articleSlug: string) => void; // AJOUT
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>; // ✅ type React
+  onArticleSelected?: (sectionSlug: string, articleSlug: string) => void;
 }) {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(false);
@@ -38,16 +38,16 @@ export function CommandMenu({
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen(!open);
+        setOpen((prev) => !prev); // ✅ toggle safe
       }
     };
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
-  }, [open, setOpen]);
+  }, [setOpen]);
 
   useEffect(() => {
     if (!open) {
-      setSearchQuery(""); // Réinitialiser la recherche lors de la fermeture
+      setSearchQuery("");
       return;
     }
 
@@ -64,7 +64,7 @@ export function CommandMenu({
           error.message
         );
       } else {
-        setArticles(data as Article[]);
+        setArticles((data ?? []) as Article[]);
       }
       setLoading(false);
     }
@@ -72,15 +72,12 @@ export function CommandMenu({
     fetchArticles();
   }, [open, supabase]);
 
-  // Fonction utilitaire pour normaliser une chaîne (insensible aux accents et à la casse)
-  const normalizeString = (str: string) => {
-    return str
+  const normalizeString = (str: string) =>
+    str
       .normalize("NFD")
       .replace(/\u0300-\u036f/g, "")
       .toLowerCase();
-  };
 
-  // Filtrer les articles basés sur searchQuery
   const filteredArticles = articles.filter((article) =>
     normalizeString(article.title).includes(normalizeString(searchQuery))
   );
@@ -88,9 +85,7 @@ export function CommandMenu({
   const handleSelect = (slug: string, sectionSlug: string) => {
     setOpen(false);
     router.push(`/docs/${sectionSlug}/${slug}`);
-    if (onArticleSelected) {
-      onArticleSelected(sectionSlug, slug); // Appel du callback
-    }
+    onArticleSelected?.(sectionSlug, slug);
   };
 
   return (
@@ -106,8 +101,10 @@ export function CommandMenu({
               onValueChange={setSearchQuery}
             />
           </div>
+
           <CommandList className="h-[var(--cmdk-list-height)] max-h-[400px] overflow-auto px-2">
             {loading && <CommandEmpty>Chargement des articles...</CommandEmpty>}
+
             {!loading &&
               filteredArticles.length === 0 &&
               searchQuery === "" && (
@@ -115,30 +112,32 @@ export function CommandMenu({
                   Commencez à taper pour rechercher des articles.
                 </CommandEmpty>
               )}
+
             {!loading &&
               filteredArticles.length === 0 &&
               searchQuery !== "" && (
                 <CommandEmpty>
-                  Aucun article trouvé pour \"{searchQuery}\".
+                  Aucun article trouvé pour &quot;{searchQuery}&quot;.
                 </CommandEmpty>
               )}
 
             <CommandGroup heading="Articles">
-              {filteredArticles.map((article) => (
-                <CommandItem
-                  key={article.id}
-                  value={article.title}
-                  onSelect={() =>
-                    handleSelect(article.slug, article.section.slug)
-                  }
-                  className="flex items-center justify-between"
-                >
-                  <span>{article.title}</span>
-                  <span className="text-muted-foreground text-xs">
-                    {article.section.slug}
-                  </span>
-                </CommandItem>
-              ))}
+              {filteredArticles.map((article) => {
+                const sectionSlug = article.section?.[0]?.slug ?? "docs";
+                return (
+                  <CommandItem
+                    key={article.id}
+                    value={article.title}
+                    onSelect={() => handleSelect(article.slug, sectionSlug)}
+                    className="flex items-center justify-between"
+                  >
+                    <span>{article.title}</span>
+                    <span className="text-muted-foreground text-xs">
+                      {sectionSlug}
+                    </span>
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </CommandList>
         </Command>
