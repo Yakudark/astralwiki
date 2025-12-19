@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "cmdk";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "cmdk";
 import { Search } from "lucide-react";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 
@@ -13,11 +20,11 @@ interface Article {
 }
 
 export function CommandMenu({
-  open, 
+  open,
   setOpen,
-  onArticleSelected // AJOUT
-}: { 
-  open: boolean; 
+  onArticleSelected, // AJOUT
+}: {
+  open: boolean;
   setOpen: (open: boolean) => void;
   onArticleSelected?: (sectionSlug: string, articleSlug: string) => void; // AJOUT
 }) {
@@ -31,7 +38,7 @@ export function CommandMenu({
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((open) => !open);
+        setOpen(!open);
       }
     };
     document.addEventListener("keydown", down);
@@ -40,8 +47,8 @@ export function CommandMenu({
 
   useEffect(() => {
     if (!open) {
-        setSearchQuery(""); // Réinitialiser la recherche lors de la fermeture
-        return;
+      setSearchQuery(""); // Réinitialiser la recherche lors de la fermeture
+      return;
     }
 
     async function fetchArticles() {
@@ -52,7 +59,10 @@ export function CommandMenu({
         .order("title", { ascending: true });
 
       if (error) {
-        console.error("Erreur lors du chargement des articles pour la recherche:", error.message);
+        console.error(
+          "Erreur lors du chargement des articles pour la recherche:",
+          error.message
+        );
       } else {
         setArticles(data as Article[]);
       }
@@ -60,15 +70,18 @@ export function CommandMenu({
     }
 
     fetchArticles();
-  }, [open, supabase]); 
+  }, [open, supabase]);
 
   // Fonction utilitaire pour normaliser une chaîne (insensible aux accents et à la casse)
   const normalizeString = (str: string) => {
-    return str.normalize("NFD").replace(/\u0300-\u036f/g, "").toLowerCase();
+    return str
+      .normalize("NFD")
+      .replace(/\u0300-\u036f/g, "")
+      .toLowerCase();
   };
 
   // Filtrer les articles basés sur searchQuery
-  const filteredArticles = articles.filter(article =>
+  const filteredArticles = articles.filter((article) =>
     normalizeString(article.title).includes(normalizeString(searchQuery))
   );
 
@@ -95,19 +108,35 @@ export function CommandMenu({
           </div>
           <CommandList className="h-[var(--cmdk-list-height)] max-h-[400px] overflow-auto px-2">
             {loading && <CommandEmpty>Chargement des articles...</CommandEmpty>}
-            {!loading && filteredArticles.length === 0 && searchQuery === "" && <CommandEmpty>Commencez à taper pour rechercher des articles.</CommandEmpty>}
-            {!loading && filteredArticles.length === 0 && searchQuery !== "" && <CommandEmpty>Aucun article trouvé pour \"{searchQuery}\".</CommandEmpty>}
-            
+            {!loading &&
+              filteredArticles.length === 0 &&
+              searchQuery === "" && (
+                <CommandEmpty>
+                  Commencez à taper pour rechercher des articles.
+                </CommandEmpty>
+              )}
+            {!loading &&
+              filteredArticles.length === 0 &&
+              searchQuery !== "" && (
+                <CommandEmpty>
+                  Aucun article trouvé pour \"{searchQuery}\".
+                </CommandEmpty>
+              )}
+
             <CommandGroup heading="Articles">
               {filteredArticles.map((article) => (
-                <CommandItem 
-                  key={article.id} 
+                <CommandItem
+                  key={article.id}
                   value={article.title}
-                  onSelect={() => handleSelect(article.slug, article.section.slug)}
+                  onSelect={() =>
+                    handleSelect(article.slug, article.section.slug)
+                  }
                   className="flex items-center justify-between"
                 >
                   <span>{article.title}</span>
-                  <span className="text-muted-foreground text-xs">{article.section.slug}</span>
+                  <span className="text-muted-foreground text-xs">
+                    {article.section.slug}
+                  </span>
                 </CommandItem>
               ))}
             </CommandGroup>

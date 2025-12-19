@@ -175,7 +175,7 @@ export function Editor({ content, onChange, editable = true }: EditorProps) {
 
             {/* Boutons pour les tableaux */}
             <ToolbarButton 
-                onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+                onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).insertContent('<p></p>').run()}
                 active={editor.isActive('table')}
                 icon={TableIcon}
                 tooltip="Insérer un tableau (3x3)"
