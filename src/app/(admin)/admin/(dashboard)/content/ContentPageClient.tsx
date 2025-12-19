@@ -43,7 +43,7 @@ import { toast } from "react-hot-toast";
 type Section = {
   id: string;
   title: string;
-  category: string | null;
+  category: string;
   slug: string;
 };
 
@@ -173,7 +173,19 @@ export default function ContentPageClient() {
         }));
 
         setArticles(normalized);
-        setSections((sectionsRes.data ?? []) as Section[]);
+        const rawSections = (sectionsRes.data ?? []) as Array<{
+          id: string;
+          title: string;
+          slug: string;
+          category: string | null;
+        }>;
+
+        const normalizedSections: Section[] = rawSections.map((s) => ({
+          ...s,
+          category: s.category ?? "", // ✅ jamais null
+        }));
+
+        setSections(normalizedSections);
       } catch (err: any) {
         console.error(err);
         setError(err.message || "Erreur lors du chargement du contenu.");
