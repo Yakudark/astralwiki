@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -19,7 +19,7 @@ function generateSlug(text: string) {
     .toString()
     .toLowerCase()
     .trim()
-    .replace(/[\s\W-]+/g, '-') // Replace spaces and non-word chars with -
+    .replace(/\s\W-]+/g, '-') // Replace spaces and non-word chars with -
     .replace(/^-+|-+$/g, ''); // Remove leading/trailing -
 }
 
@@ -45,8 +45,8 @@ export default function EditArticlePage() {
         try {
             // 1. Fetch sections and articles
             const [sectionsRes, articlesRes] = await Promise.all([
-                supabaseBrowser.from("sections").select('*'),
-                supabaseBrowser.from("articles").select('id, title').neq('id', articleId).not('parent_article_id', 'is', null).order('title') // Changement ici
+                supabaseBrowser.from("sections").select('*').order('title', { ascending: true }),
+                supabaseBrowser.from("articles").select('id, title').neq('id', articleId).not('parent_article_id', 'is', null).order('title')
             ]);
             if (sectionsRes.error) throw sectionsRes.error;
             if (sectionsRes.data) setSections(sectionsRes.data);
@@ -70,14 +70,14 @@ export default function EditArticlePage() {
             }
 
         } catch (err: any) {
-            console.error(err);
+            console.error("Erreur lors du chargement des données.", err);
             setError(err.message || "Erreur lors du chargement des données.");
         } finally {
             setInitLoading(false);
         }
     }
     loadData();
-  }, [articleId]);
+  }, [articleId, supabaseBrowser]);
 
   // Pas d'auto-generate slug sur edit pour éviter de casser les liens existants accidentellement
   // Sauf si le slug est vide, ce qui ne devrait pas arriver sur un edit.

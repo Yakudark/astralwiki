@@ -10,7 +10,6 @@ import { useEffect, useState } from "react";
 import { createSupabaseClient } from "@/lib/supabase";
 import type { Section } from "@/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-
 // Type pour un article avec ses sous-articles
 type Article = {
   id: string;
@@ -22,15 +21,15 @@ type Article = {
 };
 
 // Composant pour un lien d'article avec ses sous-articles
-const ArticleLink = ({ 
-  article, 
-  sectionSlug, 
-  pathname, 
-  level = 0 
-}: { 
-  article: Article; 
-  sectionSlug: string; 
-  pathname: string | null; 
+const ArticleLink = ({
+  article,
+  sectionSlug,
+  pathname,
+  level = 0
+}: {
+  article: Article;
+  sectionSlug: string;
+  pathname: string | null;
   level?: number;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -38,12 +37,13 @@ const ArticleLink = ({
   const isActive = pathname === articlePath;
   const hasSubArticles = article.subArticles && article.subArticles.length > 0;
 
-  // Auto-ouvrir si un sous-article est actif
   useEffect(() => {
     if (hasSubArticles && article.subArticles?.some(sub => pathname === `/docs/${sectionSlug}/${sub.slug}`)) {
       setIsOpen(true);
+    } else {
+        setIsOpen(false); // Fermer si non actif
     }
-  }, [pathname, hasSubArticles, article.subArticles, sectionSlug]);
+  }, [pathname, hasSubArticles, article.subArticles, sectionSlug, article.slug]);
 
   return (
     <div>
@@ -77,9 +77,9 @@ const ArticleLink = ({
         <div className="ml-2 mt-0.5 space-y-0.5">
           {article.subArticles!.map((subArticle) => (
             <ArticleLink 
-              key={subArticle.id} 
-              article={subArticle} 
-              sectionSlug={sectionSlug} 
+              key={subArticle.id}
+              article={subArticle}
+              sectionSlug={sectionSlug}
               pathname={pathname}
               level={level + 1}
             />
@@ -102,6 +102,18 @@ const SectionItem = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const sectionArticles = articles.filter(a => a.section_id === section.id && !a.parent_article_id);
+
+  useEffect(() => {
+    // Ouvrir si l'un de ses articles ou sous-articles est actif
+    if (sectionArticles.some(article => 
+        pathname === `/docs/${section.slug}/${article.slug}` || 
+        (article.subArticles && article.subArticles.some(sub => pathname === `/docs/${section.slug}/${sub.slug}`)))
+    ) {
+      setIsOpen(true);
+    } else {
+        setIsOpen(false); // Fermer si non actif
+    }
+  }, [pathname, sectionArticles, section.slug]);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -140,17 +152,33 @@ const SidebarCategory = ({
     icon: Icon, 
     sections, 
     articles,
-    pathname, 
+    pathname,
     colorClass
 }: { 
     title: string, 
     icon: any, 
     sections: Section[], 
     articles: Article[],
-    pathname: string | null, 
+    pathname: string | null,
     colorClass: string 
 }) => {
     const [isOpen, setIsOpen] = useState(false);
+
+    useEffect(() => {
+        // Ouvrir si l'une de ses sections ou articles est actif
+        if (sections.some(section => 
+            section.slug === pathname?.split('/')[2] || // Si la section elle-même est active
+            articles.some(article => 
+                article.section_id === section.id && 
+                (pathname === `/docs/${section.slug}/${article.slug}` || 
+                 (article.subArticles && article.subArticles.some(sub => pathname === `/docs/${section.slug}/${sub.slug}`)))
+            )
+        )) {
+            setIsOpen(true);
+        } else {
+            setIsOpen(false);
+        }
+    }, [pathname, sections, articles]);
     
     return (
         <Collapsible open={isOpen} onOpenChange={setIsOpen} className="space-y-1">
@@ -188,7 +216,7 @@ export function AppSidebar() {
   const [sections, setSections] = useState<Section[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
-
+  
   useEffect(() => {
     async function fetchData() {
       const supabase = createSupabaseClient();
@@ -203,16 +231,13 @@ export function AppSidebar() {
       }
       
       if (articlesRes.data) {
-        // Organiser les articles en hiérarchie
         const articlesMap = new Map<string, Article>();
         const rootArticles: Article[] = [];
         
-        // Créer une map de tous les articles
         articlesRes.data.forEach((article: any) => {
           articlesMap.set(article.id, { ...article, subArticles: [] });
         });
         
-        // Construire la hiérarchie
         articlesMap.forEach((article) => {
           if (article.parent_article_id) {
             const parent = articlesMap.get(article.parent_article_id);
@@ -253,16 +278,7 @@ export function AppSidebar() {
         </Link>
       </div>
 
-      {/* Search Trigger */}
-      <div className="px-4 py-4 shrink-0">
-        <Button variant="outline" className="w-full justify-start text-muted-foreground bg-background/50 border-input/50 hover:bg-primary/10 hover:text-primary transition-all group">
-          <Search className="mr-2 h-4 w-4 group-hover:text-primary transition-colors" />
-          Rechercher...
-          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 ml-auto">
-            <span className="text-xs">⌘</span>K
-          </kbd>
-        </Button>
-      </div>
+      
 
       {/* Navigation - Scrollable Area */}
       <ScrollArea className="flex-1 min-h-0 px-4">
@@ -333,6 +349,7 @@ export function AppSidebar() {
              &copy; 2024 AstralWiki
           </div>
       </div>
+      
     </div>
   );
 }

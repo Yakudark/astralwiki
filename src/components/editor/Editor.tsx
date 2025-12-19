@@ -1,7 +1,6 @@
 "use client";
 
 import { useEditor, EditorContent } from '@tiptap/react';
-// import StarterKit from '@tiptap/starter-kit'; // Supprimé
 import Document from '@tiptap/extension-document';
 import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
@@ -15,11 +14,22 @@ import Heading from '@tiptap/extension-heading';
 import History from '@tiptap/extension-history'; 
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
-import { Button } from '@/components/ui/button'; // Import du composant Button
+
+import { Table } from '@tiptap/extension-table';
+import TableCell from '@tiptap/extension-table-cell';
+import TableHeader from '@tiptap/extension-table-header';
+import TableRow from '@tiptap/extension-table-row';
+
+import { Button } from '@/components/ui/button';
 import {
   Bold as BoldIcon, Italic as ItalicIcon, List, ListOrdered, Quote, Undo, Redo, 
-  Heading2, Heading3, Link as LinkIcon, Image as ImageIcon 
-} from 'lucide-react';
+  Heading2, Heading3, Link as LinkIcon, Image as ImageIcon, 
+  Table as TableIcon, Table2, 
+  Plus, Minus, 
+  TableProperties, 
+  TableCellsMerge, TableCellsSplit,
+  MoveDown // AJOUT ICI
+} from 'lucide-react'; 
 import { cn } from '@/lib/utils';
 import { useCallback } from 'react';
 
@@ -42,7 +52,7 @@ export function Editor({ content, onChange, editable = true }: EditorProps) {
       ListItem,
       Blockquote,
       Heading.configure({
-        levels: [1, 2, 3], // Configurer les niveaux de titres souhaités
+        levels: [1, 2, 3],
       }),
       History, 
       Link.configure({
@@ -55,7 +65,13 @@ export function Editor({ content, onChange, editable = true }: EditorProps) {
          HTMLAttributes: {
             class: 'rounded-lg border border-white/10 my-4',
          }
-      })
+      }),
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content,
     editorProps: {
@@ -147,7 +163,98 @@ export function Editor({ content, onChange, editable = true }: EditorProps) {
                 icon={LinkIcon}
                 tooltip="Lien"
             />
-            
+            <ToolbarButton 
+                onClick={() => editor.chain().focus().setImage({
+                    src: window.prompt("URL de l'image:") || ""
+                }).run()}
+                active={editor.isActive('image')}
+                icon={ImageIcon}
+                tooltip="Image"
+            />
+            <div className="w-px h-6 bg-white/10 mx-1" />
+
+            {/* Boutons pour les tableaux */}
+            <ToolbarButton 
+                onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+                active={editor.isActive('table')}
+                icon={TableIcon}
+                tooltip="Insérer un tableau (3x3)"
+            />
+            <ToolbarButton 
+                onClick={() => editor.chain().focus().addRowAfter().run()}
+                active={editor.isActive('table')}
+                icon={Plus} 
+                tooltip="Ajouter une ligne en dessous"
+                disabled={!editor.isActive('table')}
+            />
+            <ToolbarButton 
+                onClick={() => editor.chain().focus().deleteRow().run()}
+                active={editor.isActive('table')}
+                icon={Minus} 
+                tooltip="Supprimer la ligne"
+                disabled={!editor.isActive('table')}
+            />
+            <ToolbarButton 
+                onClick={() => editor.chain().focus().addColumnAfter().run()}
+                active={editor.isActive('table')}
+                icon={Plus} 
+                tooltip="Ajouter une colonne à droite"
+                disabled={!editor.isActive('table')}
+            />
+            <ToolbarButton 
+                onClick={() => editor.chain().focus().deleteColumn().run()}
+                active={editor.isActive('table')}
+                icon={Minus} 
+                tooltip="Supprimer la colonne"
+                disabled={!editor.isActive('table')}
+            />
+            <ToolbarButton 
+                onClick={() => editor.chain().focus().deleteTable().run()}
+                active={editor.isActive('table')}
+                icon={Table2} 
+                tooltip="Supprimer le tableau"
+                disabled={!editor.isActive('table')}
+            />
+            <div className="w-px h-6 bg-white/10 mx-1" />
+            <ToolbarButton 
+                onClick={() => editor.chain().focus().toggleHeaderColumn().run()}
+                active={editor.isActive('tableHeader')}
+                icon={TableProperties} 
+                tooltip="Activer/Désactiver l'en-tête de colonne"
+                disabled={!editor.isActive('table')}
+            />
+            <ToolbarButton 
+                onClick={() => editor.chain().focus().toggleHeaderRow().run()}
+                active={editor.isActive('tableHeader')}
+                icon={TableProperties} 
+                tooltip="Activer/Désactiver l'en-tête de ligne"
+                disabled={!editor.isActive('table')}
+            />
+            <ToolbarButton 
+                onClick={() => editor.chain().focus().mergeCells().run()}
+                active={editor.isActive('tableCell', { colspan: null })}
+                icon={TableCellsMerge}
+                tooltip="Fusionner les cellules"
+                disabled={!editor.can().mergeCells()}
+            />
+            <ToolbarButton 
+                onClick={() => editor.chain().focus().splitCell().run()}
+                active={editor.isActive('tableCell', { colspan: 1 })}
+                icon={TableCellsSplit}
+                tooltip="Diviser la cellule"
+                disabled={!editor.can().splitCell()}
+            />
+            <div className="w-px h-6 bg-white/10 mx-1" />
+
+            {/* Nouveau bouton: Ajouter un paragraphe en dessous */} 
+            <ToolbarButton
+                onClick={() => editor.chain().focus().insertContent('<p></p>').run()}
+                active={false}
+                icon={MoveDown}
+                tooltip="Ajouter un paragraphe en dessous"
+            />
+            <div className="w-px h-6 bg-white/10 mx-1" />
+
             <div className="ml-auto flex items-center gap-1">
                 <ToolbarButton 
                     onClick={() => editor.chain().focus().undo().run()}

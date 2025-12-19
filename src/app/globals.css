@@ -42,6 +42,39 @@
   border-left: 4px solid #ccc;
 }
 
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  border: 1px solid var(--border); /* Bordure autour du tableau */
+}
+
+.prose th,
+.prose td {
+  border: 1px solid var(--border); /* Bordures des cellules */
+  padding: 0.5em 0.75em;
+  text-align: left;
+  vertical-align: top;
+}
+
+.prose th {
+  font-weight: bold;
+  background-color: var(--secondary); /* Couleur de fond pour les en-têtes */
+  color: var(--secondary-foreground);
+}
+
+/* S'assurer que les paragraphes à l'intérieur des cellules n'ajoutent pas trop d'espace */
+.prose td p, .prose th p {
+  margin: 0;
+}
+
+/* Correction pour les images dans les tableaux si elles sont utilisées */
+.prose table img {
+  margin: 0;
+  display: inline-block; /* Empêche les images de prendre toute la largeur si elles sont petites */
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -165,4 +198,34 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Styles pour les tableaux dans l'éditeur Tiptap */
+.tiptap table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+.tiptap th,
+.tiptap td {
+  border: 1px solid var(--border); /* Utiliser la variable CSS pour la bordure */
+  padding: 0.5em 1em;
+  text-align: left;
+  vertical-align: top;
+}
+
+.tiptap th {
+  font-weight: bold;
+  background-color: var(--secondary); /* Utiliser la variable CSS pour le fond */
+}
+
+/* Styles pour le redimensionnement de Tiptap */
+.tiptap .resize-cursor {
+  cursor: ew-resize;
+  cursor: col-resize;
+}
+
+.tiptap .tableWrapper {
+  overflow-x: auto;
 }
