@@ -47,14 +47,20 @@ type Section = {
   slug: string;
 };
 
-type Article = {
+// ✅ Shape réel renvoyé par Supabase (section = tableau)
+type ArticleApi = {
   id: string;
   title: string;
   slug: string;
   is_published: boolean;
   updated_at: string;
   order_index: number | null;
-  section: Section | null; // ta requête alias "section:sections (...)" renvoie un objet (ou null)
+  section: Section[];
+};
+
+// ✅ Shape consommé par ton UI (section = objet)
+type Article = Omit<ArticleApi, "section"> & {
+  section: Section | null;
 };
 
 export default function ContentPageClient() {
@@ -159,7 +165,14 @@ export default function ContentPageClient() {
         if (articlesRes.error) throw articlesRes.error;
         if (sectionsRes.error) throw sectionsRes.error;
 
-        setArticles((articlesRes.data ?? []) as Article[]);
+        // ✅ Normalisation : section[] -> section (1ère ou null)
+        const apiData = (articlesRes.data ?? []) as ArticleApi[];
+        const normalized: Article[] = apiData.map((a) => ({
+          ...a,
+          section: a.section?.[0] ?? null,
+        }));
+
+        setArticles(normalized);
         setSections((sectionsRes.data ?? []) as Section[]);
       } catch (err: any) {
         console.error(err);
